@@ -28,7 +28,7 @@ Prohibido: Redux, Formik, WatermelonDB, expo-camera, NetInfo, Axios, librerías 
 Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlite/kv-store` (si no sirve, AsyncStorage con un ADR) y los nombres de la API nueva de `expo-file-system` (File, Directory, Paths).
 
 ## 3. Estructura
-- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query. `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
+- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio. `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query. `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
 - R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
 - Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
 - El banner de conexión y pendientes vive en `src/app/_layout.tsx` (R9).
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS readings (
 );
 CREATE INDEX IF NOT EXISTS idx_readings_sync ON readings (sync_status);
 ```
-Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, values, anomalyConfirmed, photoUri } persistido, con `hasHydrated`.
+Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, photoUri, hasHydrated, startDraft, setStep, setCondition, setReadingData, clearDraft }. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones.
 
 ## 6. Reglas de negocio
 - R1: usuarios quemados en `constants/tecnicos.ts`; la sesión persiste hasta cerrar sesión.
@@ -85,7 +85,7 @@ Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `
 - R3: mostrar 7 datos (dirección, sector, cuenta, estado, última lectura, fecha, consumo promedio). Caché de TanStack Query, `staleTime` 12 h, solo en memoria.
 - R4: sin conexión se puede registrar; si no hay lectura anterior con la que comparar, `verification = "pending_verification"` y se verifica al reconectar.
 - R5: normal exige lectura; inaccesible exige motivo y sin lectura; dañado exige descripción y lectura opcional.
-- R6: `consumption = readingValue - lastReading`; anómalo si `consumption > 3 * averageMonthlyConsumption` (estrictamente mayor). Si es anómalo: advertencia, confirmación del técnico y foto obligatoria.
+- R6: `parseReading(readingText)` convierte lecturas no negativas con coma o punto decimal a número; `consumption = readingValue - lastReading`; anómalo si `consumption > 3 * averageMonthlyConsumption` (estrictamente mayor). Estas funciones puras viven en `src/domain/consumption.ts`. En el paso 2 del formulario se muestra la advertencia y se exige la confirmación del técnico. Si es anómalo: foto obligatoria.
 - R7: foto obligatoria si anómalo o dañado; opcional en los demás casos. Se copia a carpeta permanente (`evidencia-<clientId>.jpg`). Con permiso denegado: explicar y permitir continuar solo si la foto no es obligatoria.
 - R8: el borrador se persiste; al abrir, ofrecer continuar o descartar. Navegar solo tras hidratar y reconstruir la pila (inicio → paso 1 → … → paso N) para que atrás funcione.
 - R9: envío automático al reconectar (listener de `expo-network`), al abrir la app y al volver a primer plano; un solo envío a la vez. Banner de conexión y pendientes en todas las pantallas.

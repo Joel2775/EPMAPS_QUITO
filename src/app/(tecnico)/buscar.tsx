@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { router } from "expo-router";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { MeterNetworkError, MeterNotFoundError } from "@/services/api";
 import { useMeter } from "@/hooks/useMeter";
 import { meterCodeSchema } from "@/schemas/meter";
+import { useDraftStore } from "@/store/draft";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
 
 export default function MeterSearchScreen() {
@@ -11,6 +20,7 @@ export default function MeterSearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [validCode, setValidCode] = useState<string | null>(null);
   const meterQuery = useMeter(validCode);
+  const startDraft = useDraftStore((state) => state.startDraft);
 
   function handleConsult() {
     const result = meterCodeSchema.safeParse(code);
@@ -26,7 +36,7 @@ export default function MeterSearchScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Buscar medidor</Text>
 
       <TextInput
@@ -73,32 +83,48 @@ export default function MeterSearchScreen() {
         </Text>
       ) : null}
       {meterQuery.data ? (
-        <View style={styles.meterDetails}>
-          <Text style={styles.detail}>Dirección: {meterQuery.data.address}</Text>
-          <Text style={styles.detail}>Sector: {meterQuery.data.sector}</Text>
-          <Text style={styles.detail}>
-            Número de cuenta: {meterQuery.data.accountNumber}
-          </Text>
-          <Text style={styles.detail}>Estado: {meterQuery.data.condition}</Text>
-          <Text style={styles.detail}>
-            Última lectura: {meterQuery.data.lastReading}
-          </Text>
-          <Text style={styles.detail}>
-            Fecha de última lectura: {meterQuery.data.lastReadingDate}
-          </Text>
-          <Text style={styles.detail}>
-            Consumo promedio mensual:{" "}
-            {meterQuery.data.averageMonthlyConsumption}
-          </Text>
-        </View>
+        <>
+          <View style={styles.meterDetails}>
+            <Text style={styles.detail}>
+              Dirección: {meterQuery.data.address}
+            </Text>
+            <Text style={styles.detail}>Sector: {meterQuery.data.sector}</Text>
+            <Text style={styles.detail}>
+              Número de cuenta: {meterQuery.data.accountNumber}
+            </Text>
+            <Text style={styles.detail}>
+              Estado: {meterQuery.data.condition}
+            </Text>
+            <Text style={styles.detail}>
+              Última lectura: {meterQuery.data.lastReading}
+            </Text>
+            <Text style={styles.detail}>
+              Fecha de última lectura: {meterQuery.data.lastReadingDate}
+            </Text>
+            <Text style={styles.detail}>
+              Consumo promedio mensual:{" "}
+              {meterQuery.data.averageMonthlyConsumption}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.button}
+            onPress={() => {
+              startDraft(meterQuery.data);
+              router.push("/lectura/paso-1");
+            }}
+          >
+            <Text style={styles.buttonText}>Registrar lectura</Text>
+          </Pressable>
+        </>
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     padding: spacing.lg,
     gap: spacing.md,
