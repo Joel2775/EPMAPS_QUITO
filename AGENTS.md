@@ -1,41 +1,33 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# Medidores EPMAPS
 
-## Expo has changed — do not trust your training data
+App móvil para técnicos de EPMAPS (Quito): registrar lecturas de medidores de agua en campo, con foto, sin conexión y con envío automático. Prueba técnica ESFOT.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Stack y estructura
+- Expo SDK 57, TypeScript y Expo Router.
+- Solo las dependencias de docs/CONTRATO.md sección 2.
+- src/app: solo pantallas y layouts. src/db: único lugar con SQL. src/services: único acceso a MockAPI. src/store: único lugar con Zustand.
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+## Comandos
+- Tipos: npx tsc --noEmit
+- Instalar: npx expo install <paquete> (solo si el contrato lo permite)
+- Ejecutar la app: npx expo start (solo cuando yo lo pida)
 
-## Commands
+## Dónde está cada cosa
+- docs/CONTRATO.md: nombres, API, esquema SQLite y reglas R1 a R10 (fuente única).
+- docs/adr/: decisiones de tecnología.
+- .opencode/skills/: una skill por tarea, numeradas.
+- MEMORY.md: estado actual del trabajo.
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+## Cómo trabajar
+1. Al empezar, lee MEMORY.md, docs/CONTRATO.md y el ADR de la skill que te pido.
+2. Carga con la herramienta de skills solo la skill que te pido. No avances a la siguiente.
+3. Código y nombres en inglés; textos de interfaz, comentarios y documentos en español.
+4. Toca solo los archivos que la skill declara. Si necesitas un nombre o tipo nuevo, agrégalo primero a docs/CONTRATO.md y avísame.
+5. Pregunta antes de instalar dependencias que el contrato no liste.
+6. UI mínima con StyleSheet. Todo color y espaciado sale de src/theme/tokens.ts, hasta la skill 09.
+7. Lo marcado "por verificar" en el contrato se comprueba en la documentación oficial del SDK 57. No lo asumas de memoria.
+8. No reemplaces archivos existentes si la skill no lo pide. No guardes datos sensibles.
+9. Al terminar: npx tsc --noEmit, actualiza MEMORY.md, escribe "Explicación para la defensa" (máximo 10 líneas: qué hiciste, por qué y en qué archivo) y sugiere el mensaje de commit. No hagas commit.
 
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
-
-Run lint and typecheck before declaring any task done.
-
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+## MEMORY.md
+Solo "Estado actual" y "Próximos pasos". Al terminar una skill actualiza únicamente esas dos secciones. Máximo 40 líneas.
