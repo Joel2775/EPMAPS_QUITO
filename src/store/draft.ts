@@ -42,6 +42,9 @@ type DraftState = {
   clearDraft: () => void;
 };
 
+export const selectHasDraft = (state: DraftState) =>
+  state.meterCode !== null;
+
 const emptyDraft = {
   step: 0,
   meterCode: null,

@@ -28,12 +28,6 @@ type ReadingFormValues = {
   anomalyConfirmed: boolean;
 };
 
-const emptyValues: ReadingFormValues = {
-  readingText: "",
-  reasonOrDamage: "",
-  anomalyConfirmed: false,
-};
-
 export default function ReadingDetailsScreen() {
   const meter = useDraftStore((state) => state.meter);
   const meterCode = useDraftStore((state) => state.meterCode);
@@ -72,7 +66,6 @@ export default function ReadingDetailsScreen() {
   });
 
   const watchedReadingText = watch("readingText");
-  const watchedReasonOrDamage = watch("reasonOrDamage");
   const watchedAnomalyConfirmed = watch("anomalyConfirmed");
   const parsedReading = parseReading(watchedReadingText);
   const consumption =
@@ -93,17 +86,16 @@ export default function ReadingDetailsScreen() {
   }, [setStep]);
 
   useEffect(() => {
-    setReadingData({
-      readingText: watchedReadingText,
-      reasonOrDamage: watchedReasonOrDamage,
-      anomalyConfirmed: watchedAnomalyConfirmed,
+    const subscription = watch((values) => {
+      setReadingData({
+        readingText: values.readingText ?? "",
+        reasonOrDamage: values.reasonOrDamage ?? "",
+        anomalyConfirmed: values.anomalyConfirmed ?? false,
+      });
     });
-  }, [
-    setReadingData,
-    watchedAnomalyConfirmed,
-    watchedReadingText,
-    watchedReasonOrDamage,
-  ]);
+
+    return () => subscription.unsubscribe();
+  }, [setReadingData, watch]);
 
   useEffect(() => {
     if (!anomalous && watchedAnomalyConfirmed) {

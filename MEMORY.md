@@ -1,11 +1,10 @@
 ## Estado actual
 - Skill 06b-correccion implementada: `src/db/readings.ts` agrega `getReadingByClientId` y `updateReading` con guardia `sync_status = 'pending'`.
-- `src/store/draft.ts` incluye `editingClientId` y `startEditDraft`, preservando el borrador original al corregir una lectura pendiente.
-- `src/services/photos.ts` usa nombres con timestamp para evitar sobrescribir la foto original al cambiar evidencia en una corrección.
-- `src/app/(tecnico)/index.tsx` y `buscar.tsx` muestran el flujo de corrección y piden confirmar reemplazo del borrador en curso.
-- Las pantallas `lectura/paso-1` y `paso-3` soportan modo edición: resaltar estado actual, guardar corrección sin duplicado y borrar solo la foto previa si cambió.
-- `docs/CONTRATO.md` actualizó los datos del borrador y la regla de nombre de foto para R7. `npx tsc --noEmit` pasó.
+- `src/store/draft.ts` conserva `editingClientId` y `startEditDraft`; las fotos nuevas no reemplazan la evidencia original.
+- Skill 07-borrador implementada: el paso 2 persiste cada cambio, la app ofrece reanudar o descartar tras hidratar y el descarte conserva la foto original de una corrección.
+- `docs/CONTRATO.md` documenta `selectHasDraft`, `src/services/drafts.ts` y `ResumeDraftPrompt.tsx`.
+- `npx tsc --noEmit` pasó. El lint reportó un error preexistente en `src/app/(tecnico)/buscar.tsx`.
 
 ## Próximos pasos
-- Probar en dispositivo los casos de la checklist de la skill 06b: corrección de lectura normal y anómala, duplicado pendiente, foto nueva y salida sin guardar.
-- Continuar con la siguiente skill de descarte de borradores y luego la sincronización de la skill 08.
+- Probar en dispositivo todos los casos de la checklist de la skill 07, además de los casos pendientes de corrección de la skill 06b.
+- Continuar con la sincronización de la skill 08 después de validar en dispositivo.
