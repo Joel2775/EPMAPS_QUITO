@@ -108,6 +108,52 @@ export async function getReadingByMeterMonth(
   return row ? mapReadingRow(row) : null;
 }
 
+export async function getReadingByClientId(
+  db: SQLiteDatabase,
+  clientId: string
+): Promise<ReadingRow | null> {
+  const row = await db.getFirstAsync<DatabaseReadingRow>(
+    `SELECT ${READING_COLUMNS} FROM readings WHERE client_id = ?`,
+    clientId
+  );
+  return row ? mapReadingRow(row) : null;
+}
+
+export async function updateReading(
+  db: SQLiteDatabase,
+  row: ReadingRow
+): Promise<number> {
+  const result = await db.runAsync(
+    `
+      UPDATE readings
+      SET
+        meter_code = ?, month_year = ?, condition = ?, reading_value = ?,
+        reason_or_damage = ?, previous_reading = ?, average_monthly = ?,
+        consumption = ?, is_anomalous = ?, anomaly_confirmed = ?,
+        photo_uri = ?, verification = ?, sync_status = ?, updated_at = ?, sent_at = ?
+      WHERE client_id = ? AND sync_status = 'pending'
+    `,
+    row.meterCode,
+    row.monthYear,
+    row.condition,
+    row.readingValue,
+    row.reasonOrDamage,
+    row.previousReading,
+    row.averageMonthly,
+    row.consumption,
+    row.isAnomalous ? 1 : 0,
+    row.anomalyConfirmed ? 1 : 0,
+    row.photoUri,
+    row.verification,
+    row.syncStatus,
+    row.updatedAt,
+    row.sentAt,
+    row.clientId
+  );
+
+  return Number(result.changes ?? 0);
+}
+
 export async function listReadings(
   db: SQLiteDatabase
 ): Promise<ReadingRow[]> {

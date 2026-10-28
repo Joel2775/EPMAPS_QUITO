@@ -2,6 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useState } from "react";
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -10,7 +11,8 @@ import {
   View,
 } from "react-native";
 
-import { listReadings } from "@/db/readings";
+import { getReadingByClientId, listReadings } from "@/db/readings";
+import { useDraftStore } from "@/store/draft";
 import { useSessionStore } from "@/store/session";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
 import type { ReadingRow } from "@/types";
@@ -19,37 +21,86 @@ export default function TechnicianHomeScreen() {
   const employeeCode = useSessionStore((state) => state.employeeCode);
   const logout = useSessionStore((state) => state.logout);
   const db = useSQLiteContext();
+  const startEditDraft = useDraftStore((state) => state.startEditDraft);
   const [readings, setReadings] = useState<ReadingRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const refreshReadings = useCallback(() => {
+    setLoadError(null);
+
+    return listReadings(db)
+      .then((rows) => {
+        setReadings(rows);
+      })
+      .catch((caught: unknown) => {
+        setLoadError(
+          `No se pudieron cargar las lecturas: ${
+            caught instanceof Error ? caught.message : "error desconocido"
+          }`
+        );
+      });
+  }, [db]);
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      setLoadError(null);
 
-      void listReadings(db)
-        .then((rows) => {
-          if (isActive) {
-            setReadings(rows);
-          }
-        })
-        .catch((caught: unknown) => {
-          if (isActive) {
-            setLoadError(
-              `No se pudieron cargar las lecturas: ${
-                caught instanceof Error
-                  ? caught.message
-                  : "error desconocido"
-              }`
-            );
-          }
-        });
+      void refreshReadings().then(() => {
+        if (!isActive) {
+          return;
+        }
+      });
 
       return () => {
         isActive = false;
       };
-    }, [db])
+    }, [refreshReadings])
   );
+
+  async function handleCorrect(reading: ReadingRow) {
+    try {
+      const existing = await getReadingByClientId(db, reading.clientId);
+
+      if (!existing || existing.syncStatus !== "pending") {
+        Alert.alert("Esta lectura ya no se puede corregir");
+        await refreshReadings();
+        return;
+      }
+
+      const draftState = useDraftStore.getState();
+      const hasUnfinishedDraft =
+        draftState.step > 0 &&
+        draftState.clientId !== null &&
+        draftState.editingClientId !== reading.clientId;
+
+      if (hasUnfinishedDraft) {
+        Alert.alert(
+          "Hay un registro sin terminar. ¿Reemplazarlo?",
+          "Se perderá el borrador actual.",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Reemplazar",
+              onPress: () => {
+                startEditDraft(existing);
+                router.push("/lectura/paso-1");
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      startEditDraft(existing);
+      router.push("/lectura/paso-1");
+    } catch (caught) {
+      Alert.alert(
+        "No se pudo abrir la corrección",
+        caught instanceof Error ? caught.message : "error desconocido"
+      );
+      await refreshReadings();
+    }
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -70,12 +121,23 @@ export default function TechnicianHomeScreen() {
               Consumo: {reading.consumption ?? "—"}
             </Text>
             {reading.syncStatus === "sent" ? (
-              <Text style={styles.status}>Enviada</Text>
+              <Text style={styles.status}>Enviada (no editable)</Text>
+            ) : reading.syncStatus === "sending" ? (
+              <Text style={styles.status}>Enviando…</Text>
             ) : (
               <Text style={styles.status}>Pendiente de envío</Text>
             )}
             {reading.verification === "pending_verification" ? (
               <Text style={styles.status}>Pendiente de verificar</Text>
+            ) : null}
+            {reading.syncStatus === "pending" ? (
+              <Pressable
+                accessibilityRole="button"
+                style={styles.editButton}
+                onPress={() => void handleCorrect(reading)}
+              >
+                <Text style={styles.editButtonText}>Corregir</Text>
+              </Pressable>
             ) : null}
           </View>
           {reading.photoUri ? (
@@ -176,6 +238,19 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: fontSizes.md,
+    fontWeight: "600",
+    color: colors.primaryContrast,
+  },
+  editButton: {
+    marginTop: spacing.xs,
+    alignSelf: "flex-start",
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.warning,
+  },
+  editButtonText: {
+    fontSize: fontSizes.sm,
     fontWeight: "600",
     color: colors.primaryContrast,
   },

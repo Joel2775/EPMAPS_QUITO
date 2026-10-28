@@ -1,7 +1,8 @@
-import { useState } from "react";
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,10 +11,10 @@ import {
   View,
 } from "react-native";
 
-import { getReadingByMeterMonth } from "@/db/readings";
+import { getReadingByClientId, getReadingByMeterMonth } from "@/db/readings";
 import { currentMonthYear } from "@/domain/date";
-import { MeterNetworkError, MeterNotFoundError } from "@/services/api";
 import { useMeter } from "@/hooks/useMeter";
+import { MeterNetworkError, MeterNotFoundError } from "@/services/api";
 import { meterCodeSchema } from "@/schemas/meter";
 import { useDraftStore } from "@/store/draft";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
@@ -26,9 +27,23 @@ export default function MeterSearchScreen() {
     null
   );
   const [isStartingDraft, setIsStartingDraft] = useState(false);
+  const [pendingCorrection, setPendingCorrection] = useState(false);
   const meterQuery = useMeter(validCode);
   const db = useSQLiteContext();
   const startDraft = useDraftStore((state) => state.startDraft);
+  const startEditDraft = useDraftStore((state) => state.startEditDraft);
+
+  useEffect(() => {
+    if (!validCode) {
+      setPendingCorrection(false);
+      return;
+    }
+
+    const monthYear = currentMonthYear();
+    void getReadingByMeterMonth(db, validCode, monthYear).then((existing) => {
+      setPendingCorrection(Boolean(existing && existing.syncStatus === "pending"));
+    });
+  }, [db, validCode]);
 
   function handleConsult() {
     const result = meterCodeSchema.safeParse(code);
@@ -59,8 +74,15 @@ export default function MeterSearchScreen() {
       const existing = await getReadingByMeterMonth(db, validCode, monthYear);
 
       if (existing) {
+        if (existing.syncStatus === "pending") {
+          setRegistrationError(
+            `Ya existe una lectura de ${validCode} en ${monthYear}; puede corregirse.`
+          );
+          return;
+        }
+
         setRegistrationError(
-          `Ya existe una lectura de ${validCode} en ${monthYear}`
+          `Ya existe una lectura de ${validCode} en ${monthYear}: no se puede modificar`
         );
         return;
       }
@@ -76,6 +98,44 @@ export default function MeterSearchScreen() {
     } finally {
       setIsStartingDraft(false);
     }
+  }
+
+  async function handleCorrectExisting(
+    existing: NonNullable<Awaited<ReturnType<typeof getReadingByMeterMonth>>>
+  ) {
+    const row = await getReadingByClientId(db, existing.clientId);
+
+    if (!row || row.syncStatus !== "pending") {
+      setRegistrationError("Ya enviada: no se puede modificar");
+      return;
+    }
+
+    const draftState = useDraftStore.getState();
+    const hasUnfinishedDraft =
+      draftState.step > 0 &&
+      draftState.clientId !== null &&
+      draftState.editingClientId !== existing.clientId;
+
+    if (hasUnfinishedDraft) {
+      Alert.alert(
+        "Hay un registro sin terminar. ¿Reemplazarlo?",
+        "Se perderá el borrador actual.",
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Reemplazar",
+            onPress: () => {
+              startEditDraft(row);
+              router.push("/lectura/paso-1");
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    startEditDraft(row);
+    router.push("/lectura/paso-1");
   }
 
   return (
@@ -173,6 +233,24 @@ export default function MeterSearchScreen() {
           >
             <Text style={styles.buttonText}>Registrar lectura</Text>
           </Pressable>
+          {pendingCorrection && validCode ? (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.button}
+              onPress={async () => {
+                const existing = await getReadingByMeterMonth(
+                  db,
+                  validCode,
+                  currentMonthYear()
+                );
+                if (existing) {
+                  await handleCorrectExisting(existing);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Corregir lectura pendiente</Text>
+            </Pressable>
+          ) : null}
         </>
       ) : null}
     </ScrollView>

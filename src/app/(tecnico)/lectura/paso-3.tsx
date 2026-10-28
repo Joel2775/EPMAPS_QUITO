@@ -19,16 +19,18 @@ import {
 } from "@/domain/consumption";
 import { currentMonthYear } from "@/domain/date";
 import {
+  getReadingByClientId,
   getReadingByMeterMonth,
   insertReading,
   type NewReadingRow,
+  updateReading,
 } from "@/db/readings";
-import { ensureCameraPermission, takePhoto } from "@/services/photos";
+import { ensureCameraPermission, takePhoto, deletePhoto } from "@/services/photos";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { buildReadingSchema } from "@/schemas/reading";
 import { useDraftStore } from "@/store/draft";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
-import type { ReadingCondition } from "@/types";
+import type { ReadingCondition, ReadingRow } from "@/types";
 
 export default function ReadingSummaryScreen() {
   const meter = useDraftStore((state) => state.meter);
@@ -39,6 +41,7 @@ export default function ReadingSummaryScreen() {
   const anomalyConfirmed = useDraftStore((state) => state.anomalyConfirmed);
   const clientId = useDraftStore((state) => state.clientId);
   const photoUri = useDraftStore((state) => state.photoUri);
+  const editingClientId = useDraftStore((state) => state.editingClientId);
   const setPhotoUri = useDraftStore((state) => state.setPhotoUri);
   const setStep = useDraftStore((state) => state.setStep);
   const clearDraft = useDraftStore((state) => state.clearDraft);
@@ -86,6 +89,7 @@ export default function ReadingSummaryScreen() {
       reasonOrDamage,
       anomalyConfirmed,
     }).success;
+  const isEditing = Boolean(editingClientId);
 
   async function refreshPermission() {
     const nextStatus = await ensureCameraPermission();
@@ -115,6 +119,53 @@ export default function ReadingSummaryScreen() {
     setSaveError(null);
 
     try {
+      if (isEditing && editingClientId) {
+        const original = await getReadingByClientId(db, editingClientId);
+
+        if (!original) {
+          setSaveError("Esta lectura ya no se puede corregir");
+          return;
+        }
+
+        const online = await isOnlineNow();
+        const nextRow: ReadingRow = {
+          ...original,
+          condition,
+          readingValue: reading,
+          reasonOrDamage: reasonOrDamage || null,
+          previousReading: meter?.lastReading ?? null,
+          averageMonthly: meter?.averageMonthlyConsumption ?? null,
+          consumption,
+          isAnomalous: anomalous,
+          anomalyConfirmed,
+          photoUri,
+          verification:
+            original.verification === "pending_verification"
+              ? "pending_verification"
+              : online && meter !== null
+                ? "verified"
+                : "pending_verification",
+          updatedAt: new Date().toISOString(),
+          sentAt: original.sentAt,
+        };
+
+        const changed = await updateReading(db, nextRow);
+
+        if (changed === 0) {
+          setSaveError("Esta lectura ya no se puede corregir");
+          return;
+        }
+
+        const previousPhoto = original.photoUri;
+        if (previousPhoto && previousPhoto !== nextRow.photoUri) {
+          await deletePhoto(previousPhoto);
+        }
+
+        clearDraft();
+        router.dismissTo("/");
+        return;
+      }
+
       const online = await isOnlineNow();
       const monthYear = currentMonthYear();
       const existing = await getReadingByMeterMonth(db, meterCode, monthYear);
@@ -259,8 +310,7 @@ export default function ReadingSummaryScreen() {
 
         {readyToSave ? (
           <Text style={styles.successText}>
-            Aún no está guardada. Pulsa Guardar lectura para almacenarla en
-            este dispositivo.
+            Aún no está guardada. Pulsa {isEditing ? "Guardar corrección" : "Guardar lectura"} para almacenarla en este dispositivo.
           </Text>
         ) : null}
         {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
@@ -276,7 +326,7 @@ export default function ReadingSummaryScreen() {
         onPress={() => void handleSave()}
       >
         <Text style={styles.primaryButtonText}>
-          {isSaving ? "Guardando..." : "Guardar lectura"}
+          {isSaving ? "Guardando..." : isEditing ? "Guardar corrección" : "Guardar lectura"}
         </Text>
       </Pressable>
     </ScrollView>

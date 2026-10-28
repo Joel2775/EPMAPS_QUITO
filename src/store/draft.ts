@@ -20,9 +20,21 @@ type DraftState = {
   reasonOrDamage: string;
   anomalyConfirmed: boolean;
   clientId: string | null;
+  editingClientId: string | null;
   photoUri: string | null;
   hasHydrated: boolean;
   startDraft: (meterCode: string, meter: MeterDTO | null) => void;
+  startEditDraft: (row: {
+    clientId: string;
+    meterCode: string;
+    condition: ReadingCondition;
+    readingValue: number | null;
+    reasonOrDamage: string | null;
+    anomalyConfirmed: boolean;
+    photoUri: string | null;
+    previousReading: number | null;
+    averageMonthly: number | null;
+  }) => void;
   setStep: (step: number) => void;
   setCondition: (condition: ReadingCondition) => void;
   setReadingData: (data: ReadingData) => void;
@@ -39,6 +51,7 @@ const emptyDraft = {
   reasonOrDamage: "",
   anomalyConfirmed: false,
   clientId: null,
+  editingClientId: null,
   photoUri: null,
 };
 
@@ -56,6 +69,37 @@ export const useDraftStore = create<DraftState>()(
           meterCode,
           meter,
           clientId: `${Date.now()}-${randomSuffix}`,
+          editingClientId: null,
+        });
+      },
+      startEditDraft: (row) => {
+        const meter: MeterDTO | null =
+          row.previousReading !== null
+            ? {
+                id: row.meterCode,
+                code: row.meterCode,
+                accountNumber: "",
+                address: "",
+                sector: "",
+                condition: "",
+                lastReading: row.previousReading,
+                lastReadingDate: "",
+                averageMonthlyConsumption: row.averageMonthly ?? 0,
+              }
+            : null;
+
+        set({
+          ...emptyDraft,
+          step: 1,
+          meterCode: row.meterCode,
+          meter,
+          condition: row.condition,
+          readingText: row.readingValue !== null ? String(row.readingValue) : "",
+          reasonOrDamage: row.reasonOrDamage ?? "",
+          anomalyConfirmed: row.anomalyConfirmed,
+          clientId: row.clientId,
+          editingClientId: row.clientId,
+          photoUri: row.photoUri,
         });
       },
       setStep: (step) => set({ step }),
@@ -67,6 +111,10 @@ export const useDraftStore = create<DraftState>()(
       setReadingData: (data) => set(data),
       setPhotoUri: (uri) =>
         set((state) => {
+          if (state.editingClientId !== null) {
+            return { photoUri: uri ?? state.photoUri };
+          }
+
           const previousUri = state.photoUri;
 
           if (previousUri && previousUri !== uri) {
@@ -90,6 +138,7 @@ export const useDraftStore = create<DraftState>()(
         reasonOrDamage: state.reasonOrDamage,
         anomalyConfirmed: state.anomalyConfirmed,
         clientId: state.clientId,
+        editingClientId: state.editingClientId,
         photoUri: state.photoUri,
       }),
     }

@@ -46,11 +46,10 @@ export async function takePhoto(clientId: string): Promise<string | null> {
     directory.create();
   }
 
-  const destination = new File(directory, `evidencia-${clientId}.jpg`);
-
-  if (destination.exists) {
-    destination.delete();
-  }
+  const destination = new File(
+    directory,
+    `evidencia-${clientId}-${Date.now()}.jpg`
+  );
 
   const source = new File(result.assets[0].uri);
   await source.copy(destination, { overwrite: true });

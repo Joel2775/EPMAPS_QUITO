@@ -13,6 +13,7 @@ const conditions: { value: ReadingCondition; label: string }[] = [
 ];
 
 export default function ReadingConditionScreen() {
+  const condition = useDraftStore((state) => state.condition);
   const setCondition = useDraftStore((state) => state.setCondition);
   const setStep = useDraftStore((state) => state.setStep);
 
@@ -20,24 +21,28 @@ export default function ReadingConditionScreen() {
     setStep(1);
   }, [setStep]);
 
-  function chooseCondition(condition: ReadingCondition) {
-    setCondition(condition);
+  function chooseCondition(nextCondition: ReadingCondition) {
+    setCondition(nextCondition);
     router.push("/lectura/paso-2");
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Selecciona el estado del medidor</Text>
-      {conditions.map((condition) => (
-        <Pressable
-          accessibilityRole="button"
-          key={condition.value}
-          style={styles.button}
-          onPress={() => chooseCondition(condition.value)}
-        >
-          <Text style={styles.buttonText}>{condition.label}</Text>
-        </Pressable>
-      ))}
+      {conditions.map((conditionOption) => {
+        const selected = conditionOption.value === condition;
+
+        return (
+          <Pressable
+            accessibilityRole="button"
+            key={conditionOption.value}
+            style={[styles.button, selected && styles.selectedButton]}
+            onPress={() => chooseCondition(conditionOption.value)}
+          >
+            <Text style={styles.buttonText}>{conditionOption.label}</Text>
+          </Pressable>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -59,6 +64,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.md,
     backgroundColor: colors.primary,
+  },
+  selectedButton: {
+    borderWidth: 2,
+    borderColor: colors.success,
   },
   buttonText: {
     fontSize: fontSizes.md,
