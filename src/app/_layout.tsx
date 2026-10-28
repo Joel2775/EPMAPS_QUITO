@@ -1,8 +1,10 @@
 import { Stack } from "expo-router";
 import { SQLiteProvider } from "expo-sqlite";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 
 import { initDatabase } from "@/db/init";
+import { queryClient } from "@/services/queryClient";
 import { useSessionStore } from "@/store/session";
 import { colors, fontSizes, spacing } from "@/theme/tokens";
 
@@ -37,7 +39,9 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="medidores.db" onInit={initDatabase}>
-      <RootNavigator />
+      <QueryClientProvider client={queryClient}>
+        <RootNavigator />
+      </QueryClientProvider>
     </SQLiteProvider>
   );
 }

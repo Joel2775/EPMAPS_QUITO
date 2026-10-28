@@ -28,7 +28,7 @@ Prohibido: Redux, Formik, WatermelonDB, expo-camera, NetInfo, Axios, librerías 
 Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlite/kv-store` (si no sirve, AsyncStorage con un ADR) y los nombres de la API nueva de `expo-file-system` (File, Directory, Paths).
 
 ## 3. Estructura
-- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts). `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/hooks`, `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
+- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query. `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
 - R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
 - Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
 - El banner de conexión y pendientes vive en `src/app/_layout.tsx` (R9).
@@ -53,6 +53,8 @@ export type ReadingDTO = {
 };
 ```
 - Consulta: `GET /meters?code=MED-000001`. El filtro puede ser parcial: comprobar `item.code === code` exacto.
+- `src/services/api.ts` exporta `fetchMeterByCode(code)` y los errores `MeterNotFoundError` y `MeterNetworkError`.
+- Si MockAPI no incluye `id` en el medidor, `api.ts` normaliza el DTO usando el `code` exacto como `id`.
 - `condition` significa cosas distintas en `meters` y `readings`; no confundirlas.
 
 ## 5. SQLite local (`db/init.ts`, tabla `readings`: pendientes y enviadas)

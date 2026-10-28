@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { MeterNetworkError, MeterNotFoundError } from "@/services/api";
+import { useMeter } from "@/hooks/useMeter";
 import { meterCodeSchema } from "@/schemas/meter";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
 
@@ -8,6 +10,7 @@ export default function MeterSearchScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [validCode, setValidCode] = useState<string | null>(null);
+  const meterQuery = useMeter(validCode);
 
   function handleConsult() {
     const result = meterCodeSchema.safeParse(code);
@@ -33,13 +36,14 @@ export default function MeterSearchScreen() {
         autoCapitalize="characters"
         autoCorrect={false}
         value={code}
-        onChangeText={setCode}
+        onChangeText={(value) => {
+          setCode(value);
+          setError(null);
+          setValidCode(null);
+        }}
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {validCode ? (
-        <Text style={styles.success}>Código válido: {validCode}</Text>
-      ) : null}
 
       <Pressable
         accessibilityRole="button"
@@ -48,6 +52,46 @@ export default function MeterSearchScreen() {
       >
         <Text style={styles.buttonText}>Consultar</Text>
       </Pressable>
+
+      {meterQuery.isLoading ? (
+        <Text style={styles.message}>Cargando...</Text>
+      ) : null}
+      {!meterQuery.data && meterQuery.error instanceof MeterNotFoundError ? (
+        <Text style={styles.error}>Medidor no encontrado</Text>
+      ) : null}
+      {!meterQuery.data && meterQuery.error instanceof MeterNetworkError ? (
+        <Text style={styles.error}>
+          Sin conexión y este medidor no está en caché
+        </Text>
+      ) : null}
+      {!meterQuery.data &&
+      meterQuery.error &&
+      !(meterQuery.error instanceof MeterNotFoundError) &&
+      !(meterQuery.error instanceof MeterNetworkError) ? (
+        <Text style={styles.error}>
+          No se pudo consultar el medidor: {meterQuery.error.message}
+        </Text>
+      ) : null}
+      {meterQuery.data ? (
+        <View style={styles.meterDetails}>
+          <Text style={styles.detail}>Dirección: {meterQuery.data.address}</Text>
+          <Text style={styles.detail}>Sector: {meterQuery.data.sector}</Text>
+          <Text style={styles.detail}>
+            Número de cuenta: {meterQuery.data.accountNumber}
+          </Text>
+          <Text style={styles.detail}>Estado: {meterQuery.data.condition}</Text>
+          <Text style={styles.detail}>
+            Última lectura: {meterQuery.data.lastReading}
+          </Text>
+          <Text style={styles.detail}>
+            Fecha de última lectura: {meterQuery.data.lastReadingDate}
+          </Text>
+          <Text style={styles.detail}>
+            Consumo promedio mensual:{" "}
+            {meterQuery.data.averageMonthlyConsumption}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -78,9 +122,16 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.danger,
   },
-  success: {
+  message: {
     fontSize: fontSizes.md,
-    color: colors.success,
+    color: colors.text,
+  },
+  meterDetails: {
+    gap: spacing.sm,
+  },
+  detail: {
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   button: {
     padding: spacing.md,
