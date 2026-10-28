@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS readings (
 );
 CREATE INDEX IF NOT EXISTS idx_readings_sync ON readings (sync_status);
 ```
-Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, photoUri, hasHydrated, startDraft, setStep, setCondition, setReadingData, clearDraft }. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones.
+Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, clientId, photoUri, hasHydrated, startDraft, setStep, setCondition, setReadingData, setPhotoUri, clearDraft }. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones. `clientId` se genera una sola vez en `startDraft` con `Date.now()` y un sufijo aleatorio corto, y `setPhotoUri` actualiza `photoUri` borrando la anterior con `deletePhoto`; la skill 06 usa `draft.clientId` al guardar.
 
 ## 6. Reglas de negocio
 - R1: usuarios quemados en `constants/tecnicos.ts`; la sesión persiste hasta cerrar sesión.
