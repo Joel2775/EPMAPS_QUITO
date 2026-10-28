@@ -1,4 +1,4 @@
-import type { ReadingCondition } from "@/types";
+import type { MeterDTO, ReadingCondition, ReadingRow } from "@/types";
 
 const READING_PATTERN = /^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
 
@@ -29,6 +29,31 @@ export function isAnomalous(
     average !== null &&
     consumption > 3 * average
   );
+}
+
+export function verifyWithMeter(
+  row: ReadingRow,
+  meter: MeterDTO
+): {
+  previousReading: number;
+  averageMonthly: number;
+  consumption: number | null;
+  isAnomalous: boolean;
+} {
+  const consumption =
+    row.readingValue === null
+      ? null
+      : calculateConsumption(row.readingValue, meter.lastReading);
+
+  return {
+    previousReading: meter.lastReading,
+    averageMonthly: meter.averageMonthlyConsumption,
+    consumption,
+    isAnomalous: isAnomalous(
+      consumption,
+      meter.averageMonthlyConsumption
+    ),
+  };
 }
 
 export function isPhotoRequired(

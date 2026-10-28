@@ -26,6 +26,7 @@ import {
   updateReading,
 } from "@/db/readings";
 import { ensureCameraPermission, takePhoto, deletePhoto } from "@/services/photos";
+import { refreshPendingCount, syncPending } from "@/services/sync";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { buildReadingSchema } from "@/schemas/reading";
 import { useDraftStore } from "@/store/draft";
@@ -96,6 +97,14 @@ export default function ReadingSummaryScreen() {
     setPermissionStatus(nextStatus);
   }
 
+  function scheduleSync() {
+    void refreshPendingCount(db)
+      .then(() => syncPending(db))
+      .catch((error: unknown) => {
+        console.error("No se pudo actualizar el envío de lecturas.", error);
+      });
+  }
+
   async function handleTakePhoto() {
     if (!clientId) {
       return;
@@ -161,6 +170,7 @@ export default function ReadingSummaryScreen() {
           await deletePhoto(previousPhoto);
         }
 
+        scheduleSync();
         clearDraft();
         router.dismissTo("/");
         return;
@@ -213,6 +223,7 @@ export default function ReadingSummaryScreen() {
         throw caught;
       }
 
+      scheduleSync();
       clearDraft();
       router.dismissTo("/");
     } catch (caught) {

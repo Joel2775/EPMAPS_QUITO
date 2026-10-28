@@ -31,7 +31,8 @@ Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlit
 - `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL; `readings.ts` contiene las consultas parametrizadas para registrar, buscar y listar lecturas. `src/services`: único acceso a MockAPI (api.ts), envío (sync.ts) y descarte de borradores (drafts.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio, incluyendo `date.ts` (`currentMonthYear` con hora local). `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query y `useNetworkStatus.ts` expone el estado de conexión y su consulta puntual. `src/components/ResumeDraftPrompt.tsx` ofrece reanudar o descartar un borrador hidratado; `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
 - R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
 - Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
-- El banner de conexión y pendientes vive en `src/app/_layout.tsx` (R9).
+- `src/components/ConnectionBanner.tsx` muestra conexión, pendientes y estado de envío en todas las pantallas (R9); `src/components/SyncManager.tsx` coordina los reintentos.
+- `src/store/sync.ts` mantiene en memoria `pendingCount`, `isSyncing` y `version`. `src/services/sync.ts` sincroniza lecturas sin duplicarlas y verifica las registradas sin conexión.
 
 ## 4. API (MockAPI)
 Base: variable `EXPO_PUBLIC_API_URL` en `.env` (se commitea porque la URL no es secreta; hay un `.env.example`). `src/constants/config.ts` solo la exporta y lanza un error claro si falta.
@@ -54,6 +55,8 @@ export type ReadingDTO = {
 ```
 - Consulta: `GET /meters?code=MED-000001`. El filtro puede ser parcial: comprobar `item.code === code` exacto.
 - `src/services/api.ts` exporta `fetchMeterByCode(code)` y los errores `MeterNotFoundError` y `MeterNetworkError`.
+- `src/services/api.ts` también exporta `findReadingByClientId(clientId)` para localizar una lectura por coincidencia exacta y `postReading(dto)` para crearla. Ambas operaciones rechazan errores de red y respuestas HTTP no exitosas. El DTO enviado se construye desde `ReadingRow` como `ReadingDTO`, con `status: "sent"`.
+- El proyecto MockAPI debe publicar el recurso `readings` para `GET /readings?clientId=<id>` y `POST /readings`. Si la búsqueda filtrada responde 404, `api.ts` consulta `GET /readings` y compara `clientId` exactamente; un error en ambas consultas sí detiene el envío para evitar duplicados.
 - Si MockAPI no incluye `id` en el medidor, `api.ts` normaliza el DTO usando el `code` exacto como `id`.
 - `condition` significa cosas distintas en `meters` y `readings`; no confundirlas.
 
@@ -78,6 +81,13 @@ CREATE TABLE IF NOT EXISTS readings (
 CREATE INDEX IF NOT EXISTS idx_readings_sync ON readings (sync_status);
 ```
 Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, clientId, editingClientId, photoUri, hasHydrated, startDraft, startEditDraft, setStep, setCondition, setReadingData, setPhotoUri, clearDraft, selectHasDraft }. `selectHasDraft(state)` indica si `meterCode !== null`. `draft.meter` puede ser `null` si el medidor no estaba en caché; `startDraft(meterCode, meter)` conserva el código aun cuando no hay datos previos. `startEditDraft(row)` carga la lectura pendiente a corregir y deja `editingClientId` para distinguir el modo edición. `src/types/index.ts` define `ReadingRow` con propiedades camelCase, y `src/db/readings.ts` mapea esas propiedades a las columnas SQLite snake_case. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones. `clientId` se genera una sola vez en `startDraft` con `Date.now()` y un sufijo aleatorio corto, y `setPhotoUri` actualiza `photoUri` borrando la anterior con `deletePhoto` salvo en modo edición; la skill 06 usa `draft.clientId` al guardar.
+
+`src/db/readings.ts` expone además `listPending`, `claimReading`, `markSent`, `releaseReading`, `resetSendingToPending`, `applyVerification` y `countUnsent`. Todas las escrituras usan consultas parametrizadas: se reclama una fila antes de sincronizarla, los fallos la devuelven a `pending` y la verificación solo se aplica mientras está en `sending`.
+
+`src/domain/consumption.ts` exporta `verifyWithMeter(row, meter)`, que recalcula lectura anterior, promedio, consumo y anomalía con los datos del servidor. `src/services/sync.ts` verifica y envía pendientes de forma idempotente: reclama cada lectura, consulta MockAPI por su `clientId` exacto antes de crearla y evita recorridos simultáneos. `refreshPendingCount(db)` actualiza el indicador de pendientes.
+
+`src/store/sync.ts` es un store Zustand no persistido con `{ pendingCount, isSyncing, version }` y acciones para actualizarlos. `src/components/SyncManager.tsx`, montado dentro de los providers raíz, recupera estados `sending` al abrir la app y reintenta al reconectar, volver a primer plano y cada 30 segundos mientras haya pendientes y la app esté activa. `src/components/ConnectionBanner.tsx` muestra conexión, cantidad pendiente y el estado «Enviando…».
+
 
 ## 6. Reglas de negocio
 - R1: usuarios quemados en `constants/tecnicos.ts`; la sesión persiste hasta cerrar sesión.

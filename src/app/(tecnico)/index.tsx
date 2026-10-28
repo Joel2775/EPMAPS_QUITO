@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -14,12 +14,14 @@ import {
 import { getReadingByClientId, listReadings } from "@/db/readings";
 import { useDraftStore } from "@/store/draft";
 import { useSessionStore } from "@/store/session";
+import { useSyncStore } from "@/store/sync";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
 import type { ReadingRow } from "@/types";
 
 export default function TechnicianHomeScreen() {
   const employeeCode = useSessionStore((state) => state.employeeCode);
   const logout = useSessionStore((state) => state.logout);
+  const version = useSyncStore((state) => state.version);
   const db = useSQLiteContext();
   const startEditDraft = useDraftStore((state) => state.startEditDraft);
   const [readings, setReadings] = useState<ReadingRow[]>([]);
@@ -40,6 +42,10 @@ export default function TechnicianHomeScreen() {
         );
       });
   }, [db]);
+
+  useEffect(() => {
+    void refreshReadings();
+  }, [refreshReadings, version]);
 
   useFocusEffect(
     useCallback(() => {
@@ -165,6 +171,7 @@ export default function TechnicianHomeScreen() {
       >
         <Text style={styles.buttonText}>Cerrar sesión</Text>
       </Pressable>
+
     </ScrollView>
   );
 }

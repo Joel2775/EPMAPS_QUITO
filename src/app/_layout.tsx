@@ -3,6 +3,8 @@ import { SQLiteProvider } from "expo-sqlite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 
+import ConnectionBanner from "@/components/ConnectionBanner";
+import SyncManager from "@/components/SyncManager";
 import { initDatabase } from "@/db/init";
 import { queryClient } from "@/services/queryClient";
 import { useSessionStore } from "@/store/session";
@@ -40,13 +42,20 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="medidores.db" onInit={initDatabase}>
       <QueryClientProvider client={queryClient}>
-        <RootNavigator />
+        <View style={styles.root}>
+          <ConnectionBanner />
+          <RootNavigator />
+          <SyncManager />
+        </View>
       </QueryClientProvider>
     </SQLiteProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   loading: {
     flex: 1,
     alignItems: "center",

@@ -1,10 +1,13 @@
 ## Estado actual
-- Skill 06b-correccion implementada: `src/db/readings.ts` agrega `getReadingByClientId` y `updateReading` con guardia `sync_status = 'pending'`.
-- `src/store/draft.ts` conserva `editingClientId` y `startEditDraft`; las fotos nuevas no reemplazan la evidencia original.
-- Skill 07-borrador implementada: el paso 2 persiste cada cambio, la app ofrece reanudar o descartar tras hidratar y el descarte conserva la foto original de una corrección.
-- `docs/CONTRATO.md` documenta `selectHasDraft`, `src/services/drafts.ts` y `ResumeDraftPrompt.tsx`.
-- `npx tsc --noEmit` pasó. El lint reportó un error preexistente en `src/app/(tecnico)/buscar.tsx`.
+- Skills 06b y 07 implementadas: corrección solo mientras está pendiente y borradores reanudables; la foto original se conserva durante una corrección.
+- Skill 08 implementada: SQLite reclama, verifica y marca lecturas; `src/services/sync.ts` comprueba `clientId` antes del POST y evita duplicados.
+- `src/components/SyncManager.tsx` reintenta al abrir, reconectar, volver a primer plano y cada 30 segundos con pendientes; `ConnectionBanner.tsx` muestra conexión, pendientes y envío.
+- `src/store/sync.ts` mantiene el estado de sincronización en memoria; lista local se actualiza al cambiar `version`.
+- `docs/CONTRATO.md` actualizado con el servicio, store, componentes y consultas de envío.
+- `npx tsc --noEmit` pasó tras la implementación y el ajuste final del gestor.
+- MockAPI devuelve HTTP 404 al filtrar `/readings?clientId=...` sin coincidencias, aunque `/readings` existe y responde 200. `findReadingByClientId` ahora recurre a la lista y compara el `clientId` exacto; reconoce registros antiguos sin exigir `status: "sent"`.
+- La primera prueba dejó 3 lecturas locales pendientes de forma segura; volverán a sincronizarse automáticamente con el ajuste.
 
 ## Próximos pasos
-- Probar en dispositivo todos los casos de la checklist de la skill 07, además de los casos pendientes de corrección de la skill 06b.
-- Continuar con la sincronización de la skill 08 después de validar en dispositivo.
+- Reprobar que las 3 lecturas se envíen y confirmar que hay exactamente un registro remoto por `clientId`.
+- Completar en dispositivo la checklist: online/offline, verificación pendiente, cierre y reapertura, cambios de red sin duplicados, banner en todas las pantallas y bloqueo de corrección una vez enviada.

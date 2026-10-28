@@ -162,3 +162,91 @@ export async function listReadings(
   );
   return rows.map(mapReadingRow);
 }
+
+export async function listPending(
+  db: SQLiteDatabase
+): Promise<ReadingRow[]> {
+  const rows = await db.getAllAsync<DatabaseReadingRow>(
+    `SELECT ${READING_COLUMNS} FROM readings WHERE sync_status = 'pending' ORDER BY created_at ASC, rowid ASC`
+  );
+  return rows.map(mapReadingRow);
+}
+
+export async function claimReading(
+  db: SQLiteDatabase,
+  clientId: string
+): Promise<boolean> {
+  const result = await db.runAsync(
+    "UPDATE readings SET sync_status = 'sending' WHERE client_id = ? AND sync_status = 'pending'",
+    clientId
+  );
+  return result.changes === 1;
+}
+
+export async function markSent(
+  db: SQLiteDatabase,
+  clientId: string
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const result = await db.runAsync(
+    "UPDATE readings SET sync_status = 'sent', sent_at = ?, updated_at = ? WHERE client_id = ? AND sync_status = 'sending'",
+    now,
+    now,
+    clientId
+  );
+  return result.changes === 1;
+}
+
+export async function releaseReading(
+  db: SQLiteDatabase,
+  clientId: string
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE readings SET sync_status = 'pending' WHERE client_id = ? AND sync_status = 'sending'",
+    clientId
+  );
+}
+
+export async function resetSendingToPending(
+  db: SQLiteDatabase
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE readings SET sync_status = 'pending' WHERE sync_status = 'sending'"
+  );
+}
+
+export async function applyVerification(
+  db: SQLiteDatabase,
+  clientId: string,
+  verification: {
+    previousReading: number;
+    averageMonthly: number;
+    consumption: number | null;
+    isAnomalous: boolean;
+  }
+): Promise<boolean> {
+  const result = await db.runAsync(
+    `
+      UPDATE readings
+      SET previous_reading = ?, average_monthly = ?, consumption = ?,
+          is_anomalous = ?, verification = 'verified'
+      WHERE client_id = ? AND sync_status = 'sending'
+    `,
+    verification.previousReading,
+    verification.averageMonthly,
+    verification.consumption,
+    verification.isAnomalous ? 1 : 0,
+    clientId
+  );
+  return result.changes === 1;
+}
+
+export async function countUnsent(db: SQLiteDatabase): Promise<number> {
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM readings WHERE sync_status != 'sent'"
+  );
+  if (!row) {
+    throw new Error("No se pudo contar las lecturas pendientes.");
+  }
+  return row.count;
+}
