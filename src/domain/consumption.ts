@@ -15,13 +15,20 @@ export function parseReading(readingText: string): number | null {
 
 export function calculateConsumption(
   reading: number,
-  lastReading: number
-): number {
-  return reading - lastReading;
+  lastReading: number | null
+): number | null {
+  return lastReading === null ? null : reading - lastReading;
 }
 
-export function isAnomalous(consumption: number, average: number): boolean {
-  return consumption > 3 * average;
+export function isAnomalous(
+  consumption: number | null,
+  average: number | null
+): boolean {
+  return (
+    consumption !== null &&
+    average !== null &&
+    consumption > 3 * average
+  );
 }
 
 export function isPhotoRequired(

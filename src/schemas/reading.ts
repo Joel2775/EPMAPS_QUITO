@@ -9,8 +9,8 @@ import type { ReadingCondition } from "@/types";
 
 type ReadingSchemaOptions = {
   condition: ReadingCondition;
-  lastReading: number;
-  average: number;
+  lastReading: number | null;
+  average: number | null;
 };
 
 export function buildReadingSchema({
@@ -76,7 +76,10 @@ export function buildReadingSchema({
       }
 
       const consumption = calculateConsumption(reading, lastReading);
-      if (isAnomalous(consumption, average) && !values.anomalyConfirmed) {
+      if (
+        isAnomalous(consumption, average) &&
+        !values.anomalyConfirmed
+      ) {
         context.addIssue({
           code: "custom",
           path: ["anomalyConfirmed"],

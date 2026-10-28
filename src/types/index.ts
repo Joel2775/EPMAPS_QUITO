@@ -29,3 +29,23 @@ export type ReadingDTO = {
   status: "sent";
   createdAt: string;
 };
+
+export type ReadingRow = {
+  clientId: string;
+  meterCode: string;
+  monthYear: string;
+  condition: ReadingCondition;
+  readingValue: number | null;
+  reasonOrDamage: string | null;
+  previousReading: number | null;
+  averageMonthly: number | null;
+  consumption: number | null;
+  isAnomalous: boolean;
+  anomalyConfirmed: boolean;
+  photoUri: string | null;
+  verification: Verification;
+  syncStatus: SyncStatus;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
+};

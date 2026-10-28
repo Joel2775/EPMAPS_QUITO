@@ -22,7 +22,7 @@ type DraftState = {
   clientId: string | null;
   photoUri: string | null;
   hasHydrated: boolean;
-  startDraft: (meter: MeterDTO) => void;
+  startDraft: (meterCode: string, meter: MeterDTO | null) => void;
   setStep: (step: number) => void;
   setCondition: (condition: ReadingCondition) => void;
   setReadingData: (data: ReadingData) => void;
@@ -47,13 +47,13 @@ export const useDraftStore = create<DraftState>()(
     (set) => ({
       ...emptyDraft,
       hasHydrated: false,
-      startDraft: (meter) => {
+      startDraft: (meterCode, meter) => {
         const randomSuffix = Math.random().toString(36).slice(2, 8);
 
         set({
           ...emptyDraft,
           step: 1,
-          meterCode: meter.code,
+          meterCode,
           meter,
           clientId: `${Date.now()}-${randomSuffix}`,
         });

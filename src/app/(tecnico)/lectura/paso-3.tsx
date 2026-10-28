@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { router } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import {
   Image,
   Linking,
@@ -15,12 +17,22 @@ import {
   isPhotoRequired,
   parseReading,
 } from "@/domain/consumption";
+import { currentMonthYear } from "@/domain/date";
+import {
+  getReadingByMeterMonth,
+  insertReading,
+  type NewReadingRow,
+} from "@/db/readings";
 import { ensureCameraPermission, takePhoto } from "@/services/photos";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { buildReadingSchema } from "@/schemas/reading";
 import { useDraftStore } from "@/store/draft";
 import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
+import type { ReadingCondition } from "@/types";
 
 export default function ReadingSummaryScreen() {
   const meter = useDraftStore((state) => state.meter);
+  const meterCode = useDraftStore((state) => state.meterCode);
   const condition = useDraftStore((state) => state.condition);
   const readingText = useDraftStore((state) => state.readingText);
   const reasonOrDamage = useDraftStore((state) => state.reasonOrDamage);
@@ -29,6 +41,11 @@ export default function ReadingSummaryScreen() {
   const photoUri = useDraftStore((state) => state.photoUri);
   const setPhotoUri = useDraftStore((state) => state.setPhotoUri);
   const setStep = useDraftStore((state) => state.setStep);
+  const clearDraft = useDraftStore((state) => state.clearDraft);
+  const db = useSQLiteContext();
+  const { isOnlineNow } = useNetworkStatus();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<
     "unknown" | "granted" | "denied" | "blocked"
   >("unknown");
@@ -52,9 +69,23 @@ export default function ReadingSummaryScreen() {
     consumption !== null && meter
       ? isAnomalous(consumption, meter.averageMonthlyConsumption)
       : false;
-  const photoRequired = condition ? isPhotoRequired(condition, anomalous) : false;
+  const activeCondition: ReadingCondition = condition ?? "normal";
+  const photoRequired = condition
+    ? isPhotoRequired(condition, anomalous)
+    : false;
   const missingPhoto = photoRequired && !photoUri;
-  const readyToSave = !missingPhoto;
+  const readyToSave =
+    Boolean(clientId && meterCode && condition) &&
+    !missingPhoto &&
+    buildReadingSchema({
+      condition: activeCondition,
+      lastReading: meter?.lastReading ?? null,
+      average: meter?.averageMonthlyConsumption ?? null,
+    }).safeParse({
+      readingText,
+      reasonOrDamage,
+      anomalyConfirmed,
+    }).success;
 
   async function refreshPermission() {
     const nextStatus = await ensureCameraPermission();
@@ -73,6 +104,75 @@ export default function ReadingSummaryScreen() {
     }
 
     await refreshPermission();
+  }
+
+  async function handleSave() {
+    if (!readyToSave || !clientId || !meterCode || !condition || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const online = await isOnlineNow();
+      const monthYear = currentMonthYear();
+      const existing = await getReadingByMeterMonth(db, meterCode, monthYear);
+
+      if (existing) {
+        setSaveError(`Ya existe una lectura de ${meterCode} en ${monthYear}`);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const row: NewReadingRow = {
+        clientId,
+        meterCode,
+        monthYear,
+        condition,
+        readingValue: reading,
+        reasonOrDamage: reasonOrDamage || null,
+        previousReading: meter?.lastReading ?? null,
+        averageMonthly: meter?.averageMonthlyConsumption ?? null,
+        consumption,
+        isAnomalous: anomalous,
+        anomalyConfirmed,
+        photoUri,
+        verification: online && meter !== null ? "verified" : "pending_verification",
+        createdAt: now,
+        updatedAt: now,
+        sentAt: null,
+      };
+
+      try {
+        await insertReading(db, row);
+      } catch (caught) {
+        if (
+          caught instanceof Error &&
+          caught.message.includes(
+            "UNIQUE constraint failed: readings.meter_code, readings.month_year"
+          )
+        ) {
+          setSaveError(
+            `Ya existe una lectura de ${meterCode} en ${monthYear}`
+          );
+          return;
+        }
+
+        throw caught;
+      }
+
+      clearDraft();
+      router.dismissTo("/");
+    } catch (caught) {
+      setSaveError(
+        `No se pudo guardar la lectura: ${
+          caught instanceof Error ? caught.message : "error desconocido"
+        }`
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -158,9 +258,27 @@ export default function ReadingSummaryScreen() {
         ) : null}
 
         {readyToSave ? (
-          <Text style={styles.successText}>Listo para guardar</Text>
+          <Text style={styles.successText}>
+            Aún no está guardada. Pulsa Guardar lectura para almacenarla en
+            este dispositivo.
+          </Text>
         ) : null}
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
       </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !readyToSave || isSaving }}
+        style={[
+          styles.primaryButton,
+          (!readyToSave || isSaving) && styles.disabledButton,
+        ]}
+        disabled={!readyToSave || isSaving}
+        onPress={() => void handleSave()}
+      >
+        <Text style={styles.primaryButtonText}>
+          {isSaving ? "Guardando..." : "Guardar lectura"}
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -195,6 +313,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.md,
     backgroundColor: colors.primary,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   primaryButtonText: {
     fontSize: fontSizes.md,

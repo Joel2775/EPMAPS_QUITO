@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { router } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import {
   Pressable,
   ScrollView,
@@ -9,6 +10,8 @@ import {
   View,
 } from "react-native";
 
+import { getReadingByMeterMonth } from "@/db/readings";
+import { currentMonthYear } from "@/domain/date";
 import { MeterNetworkError, MeterNotFoundError } from "@/services/api";
 import { useMeter } from "@/hooks/useMeter";
 import { meterCodeSchema } from "@/schemas/meter";
@@ -19,7 +22,12 @@ export default function MeterSearchScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [validCode, setValidCode] = useState<string | null>(null);
+  const [registrationError, setRegistrationError] = useState<string | null>(
+    null
+  );
+  const [isStartingDraft, setIsStartingDraft] = useState(false);
   const meterQuery = useMeter(validCode);
+  const db = useSQLiteContext();
   const startDraft = useDraftStore((state) => state.startDraft);
 
   function handleConsult() {
@@ -32,7 +40,42 @@ export default function MeterSearchScreen() {
     }
 
     setError(null);
+    setRegistrationError(null);
     setValidCode(result.data);
+  }
+
+  async function handleStartDraft(
+    meter: NonNullable<typeof meterQuery.data> | null
+  ) {
+    if (!validCode || isStartingDraft) {
+      return;
+    }
+
+    setIsStartingDraft(true);
+    setRegistrationError(null);
+
+    try {
+      const monthYear = currentMonthYear();
+      const existing = await getReadingByMeterMonth(db, validCode, monthYear);
+
+      if (existing) {
+        setRegistrationError(
+          `Ya existe una lectura de ${validCode} en ${monthYear}`
+        );
+        return;
+      }
+
+      startDraft(validCode, meter);
+      router.push("/lectura/paso-1");
+    } catch (caught) {
+      setRegistrationError(
+        `No se pudo comprobar si ya existe una lectura: ${
+          caught instanceof Error ? caught.message : "error desconocido"
+        }`
+      );
+    } finally {
+      setIsStartingDraft(false);
+    }
   }
 
   return (
@@ -49,11 +92,15 @@ export default function MeterSearchScreen() {
         onChangeText={(value) => {
           setCode(value);
           setError(null);
+          setRegistrationError(null);
           setValidCode(null);
         }}
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {registrationError ? (
+        <Text style={styles.error}>{registrationError}</Text>
+      ) : null}
 
       <Pressable
         accessibilityRole="button"
@@ -70,9 +117,21 @@ export default function MeterSearchScreen() {
         <Text style={styles.error}>Medidor no encontrado</Text>
       ) : null}
       {!meterQuery.data && meterQuery.error instanceof MeterNetworkError ? (
-        <Text style={styles.error}>
-          Sin conexión y este medidor no está en caché
-        </Text>
+        <>
+          <Text style={styles.error}>
+            Sin conexión y este medidor no está en caché
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.button}
+            disabled={isStartingDraft}
+            onPress={() => void handleStartDraft(null)}
+          >
+            <Text style={styles.buttonText}>
+              Registrar sin datos del medidor
+            </Text>
+          </Pressable>
+        </>
       ) : null}
       {!meterQuery.data &&
       meterQuery.error &&
@@ -109,10 +168,8 @@ export default function MeterSearchScreen() {
           <Pressable
             accessibilityRole="button"
             style={styles.button}
-            onPress={() => {
-              startDraft(meterQuery.data);
-              router.push("/lectura/paso-1");
-            }}
+            disabled={isStartingDraft}
+            onPress={() => void handleStartDraft(meterQuery.data)}
           >
             <Text style={styles.buttonText}>Registrar lectura</Text>
           </Pressable>

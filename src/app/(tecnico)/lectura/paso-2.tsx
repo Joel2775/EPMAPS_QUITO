@@ -36,6 +36,7 @@ const emptyValues: ReadingFormValues = {
 
 export default function ReadingDetailsScreen() {
   const meter = useDraftStore((state) => state.meter);
+  const meterCode = useDraftStore((state) => state.meterCode);
   const condition = useDraftStore((state) => state.condition);
   const readingText = useDraftStore((state) => state.readingText);
   const reasonOrDamage = useDraftStore((state) => state.reasonOrDamage);
@@ -48,8 +49,8 @@ export default function ReadingDetailsScreen() {
     () =>
       buildReadingSchema({
         condition: activeCondition,
-        lastReading: meter?.lastReading ?? 0,
-        average: meter?.averageMonthlyConsumption ?? 0,
+        lastReading: meter?.lastReading ?? null,
+        average: meter?.averageMonthlyConsumption ?? null,
       }),
     [activeCondition, meter]
   );
@@ -120,7 +121,7 @@ export default function ReadingDetailsScreen() {
       ? "Motivo de inaccesibilidad"
       : "Descripción del daño";
 
-  if (!meter || !condition) {
+  if (!condition) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>
@@ -132,7 +133,14 @@ export default function ReadingDetailsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Medidor {meter.code}</Text>
+      <Text style={styles.title}>
+        Medidor {meter?.code ?? meterCode ?? "Sin datos"}
+      </Text>
+      {!meter ? (
+        <Text style={styles.information}>
+          Sin la lectura anterior: se verificará al recuperar la conexión
+        </Text>
+      ) : null}
       {activeCondition === "inaccesible" ? (
         <Text style={styles.message}>
           El medidor es inaccesible; no ingreses una lectura.
@@ -193,8 +201,8 @@ export default function ReadingDetailsScreen() {
           <Text style={styles.message}>Consumo: {consumption}</Text>
           {readingBelowPrevious ? (
             <Text style={styles.information}>
-              La lectura es menor que la anterior ({meter.lastReading}); revisa
-              el dato antes de continuar.
+              La lectura es menor que la anterior ({meter?.lastReading});
+              revisa el dato antes de continuar.
             </Text>
           ) : null}
           {anomalous ? (

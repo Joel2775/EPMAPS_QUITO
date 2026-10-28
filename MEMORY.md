@@ -1,12 +1,11 @@
 ## Estado actual
-- Skill 05-foto ejecutada: `src/services/photos.ts` gestiona permiso de cámara, captura y copia segura a la carpeta permanente `Documents/evidencias`.
-- `src/store/draft.ts` incluye `clientId` y `setPhotoUri`, con persistencia del borrador y borrado de la foto anterior al reemplazarla.
-- `src/app/(tecnico)/lectura/paso-3.tsx` agrega la sección de foto, estados de permiso, preview y validación de foto obligatoria u opcional.
-- `app.json` incluye el plugin `expo-image-picker` con el texto de permiso en español.
-- `docs/CONTRATO.md` §5 actualizado con `clientId`, `setPhotoUri` y la nota de uso en la skill 06.
-- `npx tsc --noEmit` quedó en verde.
+- Skill 06-registro-local implementada: las lecturas se guardan en SQLite con `src/db/readings.ts`, consultas parametrizadas, prevención de duplicados por medidor y mes, y estado inicial pendiente de envío.
+- `src/hooks/useNetworkStatus.ts` consulta la conectividad al guardar; los registros quedan pendientes de verificar si no hay conexión o faltan datos del medidor.
+- `src/domain/date.ts` genera el mes local; los borradores admiten `meter: null`; la pantalla principal lista lecturas y fotos persistidas.
+- `docs/CONTRATO.md` §3 y §5 refleja los nuevos módulos y que `draft.meter` puede ser nulo.
+- `npx tsc --noEmit` pasó; prueba de integración SQLite con Node confirmó guardado, estado inicial, listado y rechazo de duplicados. La ejecución web no pudo compilar por falta del WASM incluido/esperado por `expo-sqlite`.
+- Paso 3 aclara que la lectura aún no está guardada hasta pulsar el botón; inicio informa cuando no hay registros. Falta probar conectividad, cámara y persistencia real en dispositivo.
 
 ## Próximos pasos
-- Probar en el teléfono: `MED-000001`, lectura 182, foto opcional y continuar sin foto; `MED-000001`, lectura 183, foto obligatoria y bloquear acceso; `MED-000002` o lectura dañada, confirmación de foto obligatoria.
-- Verificar flujo de permiso denegado: explicación, botón reintentar; bloqueado: abrir ajustes; para foto opcional continuar sin foto; para obligatoria mostrar "Falta la foto obligatoria".
-- Continuar con la skill 06 para guardar localmente y enlazar `draft.clientId` con el registro final.
+- Probar en el teléfono: MED-000001 con lectura 182 y conexión; MED-000002 consultado y luego modo avión; MED-000003 sin caché y modo avión; duplicado en el mismo mes; reapertura de la app; lectura 183 sin foto obligatoria.
+- Si las pruebas pasan, continuar con la skill 06b-correccion; después implementar sincronización según la skill 08.

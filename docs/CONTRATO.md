@@ -28,7 +28,7 @@ Prohibido: Redux, Formik, WatermelonDB, expo-camera, NetInfo, Axios, librerías 
 Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlite/kv-store` (si no sirve, AsyncStorage con un ADR) y los nombres de la API nueva de `expo-file-system` (File, Directory, Paths).
 
 ## 3. Estructura
-- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio. `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query. `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
+- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL; `readings.ts` contiene las consultas parametrizadas para registrar, buscar y listar lecturas. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio, incluyendo `date.ts` (`currentMonthYear` con hora local). `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query y `useNetworkStatus.ts` expone el estado de conexión y su consulta puntual. `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
 - R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
 - Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
 - El banner de conexión y pendientes vive en `src/app/_layout.tsx` (R9).
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS readings (
 );
 CREATE INDEX IF NOT EXISTS idx_readings_sync ON readings (sync_status);
 ```
-Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, clientId, photoUri, hasHydrated, startDraft, setStep, setCondition, setReadingData, setPhotoUri, clearDraft }. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones. `clientId` se genera una sola vez en `startDraft` con `Date.now()` y un sufijo aleatorio corto, y `setPhotoUri` actualiza `photoUri` borrando la anterior con `deletePhoto`; la skill 06 usa `draft.clientId` al guardar.
+Zustand: `session.ts` { employeeCode, hasHydrated, login, logout } persistido; `draft.ts` { step, meterCode, meter, condition, readingText, reasonOrDamage, anomalyConfirmed, clientId, photoUri, hasHydrated, startDraft, setStep, setCondition, setReadingData, setPhotoUri, clearDraft }. `draft.meter` puede ser `null` si el medidor no estaba en caché; `startDraft(meterCode, meter)` conserva el código aun cuando no hay datos previos. `src/types/index.ts` define `ReadingRow` con propiedades camelCase, y `src/db/readings.ts` mapea esas propiedades a las columnas SQLite snake_case. Se persisten los datos del borrador, excepto `hasHydrated` y las acciones. `clientId` se genera una sola vez en `startDraft` con `Date.now()` y un sufijo aleatorio corto, y `setPhotoUri` actualiza `photoUri` borrando la anterior con `deletePhoto`; la skill 06 usa `draft.clientId` al guardar.
 
 ## 6. Reglas de negocio
 - R1: usuarios quemados en `constants/tecnicos.ts`; la sesión persiste hasta cerrar sesión.
