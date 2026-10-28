@@ -29,6 +29,7 @@ Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlit
 
 ## 3. Estructura
 - `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL. `src/services`: único acceso a MockAPI (api.ts) y envío (sync.ts). `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/hooks`, `src/components`, `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
+- R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
 - Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
 - El banner de conexión y pendientes vive en `src/app/_layout.tsx` (R9).
 

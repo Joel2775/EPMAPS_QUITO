@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useSessionStore } from "@/store/session";
@@ -11,6 +12,14 @@ export default function TechnicianHomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Base lista</Text>
       <Text style={styles.employee}>Técnico: {employeeCode}</Text>
+
+      <Pressable
+        accessibilityRole="button"
+        style={styles.button}
+        onPress={() => router.push("/buscar")}
+      >
+        <Text style={styles.buttonText}>Nueva lectura</Text>
+      </Pressable>
 
       <Pressable
         accessibilityRole="button"
