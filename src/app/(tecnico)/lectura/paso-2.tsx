@@ -2,16 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 
+import { Field } from "@/components/ui/Field";
+import { Key } from "@/components/ui/Key";
+import { Meter } from "@/components/ui/Meter";
+import { Plate } from "@/components/ui/Plate";
+import { Screen } from "@/components/ui/Screen";
+import { StepHeader } from "@/components/ui/StepHeader";
 import {
   calculateConsumption,
   isAnomalous,
@@ -19,7 +17,14 @@ import {
 } from "@/domain/consumption";
 import { buildReadingSchema } from "@/schemas/reading";
 import { useDraftStore } from "@/store/draft";
-import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
+import {
+  borders,
+  colors,
+  dimensions,
+  radius,
+  spacing,
+  typography,
+} from "@/theme/tokens";
 import type { ReadingCondition } from "@/types";
 
 type ReadingFormValues = {
@@ -115,48 +120,57 @@ export default function ReadingDetailsScreen() {
 
   if (!condition) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>
-          Inicia el registro desde la búsqueda de un medidor.
-        </Text>
-      </View>
+      <Screen>
+        <Plate style={styles.errorPlate}>
+          <Text style={styles.plateText}>
+            Inicia el registro desde la búsqueda de un medidor.
+          </Text>
+        </Plate>
+      </Screen>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
+      <StepHeader currentStep={2} />
       <Text style={styles.title}>
         Medidor {meter?.code ?? meterCode ?? "Sin datos"}
       </Text>
       {!meter ? (
-        <Text style={styles.information}>
-          Sin la lectura anterior: se verificará al recuperar la conexión
-        </Text>
+        <Plate style={styles.errorPlate}>
+          <Text style={styles.plateText}>
+            Sin conexión: se verificará la lectura al recuperar la conexión.
+          </Text>
+        </Plate>
       ) : null}
       {activeCondition === "inaccesible" ? (
-        <Text style={styles.message}>
-          El medidor es inaccesible; no ingreses una lectura.
-        </Text>
+        <Plate>
+          <Text style={styles.plateText}>
+            El medidor es inaccesible; no ingreses una lectura.
+          </Text>
+        </Plate>
       ) : (
         <Controller
           control={control}
           name="readingText"
           render={({ field }) => (
-            <View style={styles.field}>
-              <Text style={styles.label}>Lectura</Text>
-              <TextInput
+            <Plate>
+              <Field
                 accessibilityLabel="Lectura"
-                style={styles.input}
+                label="Lectura"
                 placeholder="Ej. 182 o 182,5"
-                placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 value={field.value}
                 onChangeText={field.onChange}
               />
               {errors.readingText?.message ? (
-                <Text style={styles.error}>{errors.readingText.message}</Text>
+                <View style={styles.errorPlate}>
+                  <Text style={styles.plateText}>
+                    {errors.readingText.message}
+                  </Text>
+                </View>
               ) : null}
-            </View>
+            </Plate>
           )}
         />
       )}
@@ -166,39 +180,40 @@ export default function ReadingDetailsScreen() {
           control={control}
           name="reasonOrDamage"
           render={({ field }) => (
-            <View style={styles.field}>
-              <Text style={styles.label}>{reasonLabel}</Text>
-              <TextInput
+            <Plate>
+              <Field
                 accessibilityLabel={reasonLabel}
-                style={[styles.input, styles.multilineInput]}
+                label={reasonLabel}
                 placeholder={reasonLabel}
-                placeholderTextColor={colors.textMuted}
                 multiline
                 textAlignVertical="top"
                 value={field.value}
                 onChangeText={field.onChange}
+                style={styles.multilineInput}
               />
               {errors.reasonOrDamage?.message ? (
-                <Text style={styles.error}>
-                  {errors.reasonOrDamage.message}
-                </Text>
+                <View style={styles.errorPlate}>
+                  <Text style={styles.plateText}>
+                    {errors.reasonOrDamage.message}
+                  </Text>
+                </View>
               ) : null}
-            </View>
+            </Plate>
           )}
         />
       ) : null}
 
       {consumption !== null ? (
-        <View style={styles.feedback}>
-          <Text style={styles.message}>Consumo: {consumption}</Text>
+        <Plate>
+          <Meter label="Consumo" value={consumption} />
           {readingBelowPrevious ? (
-            <Text style={styles.information}>
+            <Text style={styles.plateText}>
               La lectura es menor que la anterior ({meter?.lastReading});
               revisa el dato antes de continuar.
             </Text>
           ) : null}
           {anomalous ? (
-            <>
+            <View style={styles.warningPlate}>
               <Text style={styles.warning}>
                 Consumo anómalo: supera tres veces el promedio mensual.
               </Text>
@@ -207,92 +222,66 @@ export default function ReadingDetailsScreen() {
                 name="anomalyConfirmed"
                 render={({ field }) => (
                   <View style={styles.switchRow}>
-                    <Text style={styles.label}>Revisé el medidor</Text>
+                    <Text style={styles.switchLabel}>Revisé el medidor</Text>
                     <Switch
                       accessibilityLabel="Revisé el medidor"
                       value={field.value}
                       onValueChange={field.onChange}
+                      thumbColor={colors.surface}
                       trackColor={{
                         false: colors.border,
-                        true: colors.primary,
+                        true: colors.electricBlue,
                       }}
+                      ios_backgroundColor={colors.border}
                     />
                   </View>
                 )}
               />
-              {errors.anomalyConfirmed?.message ? (
-                <Text style={styles.error}>
-                  {errors.anomalyConfirmed.message}
-                </Text>
-              ) : null}
-            </>
+            </View>
           ) : null}
-        </View>
+          {errors.anomalyConfirmed?.message ? (
+            <View style={styles.errorPlate}>
+              <Text style={styles.plateText}>
+                {errors.anomalyConfirmed.message}
+              </Text>
+            </View>
+          ) : null}
+        </Plate>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        style={styles.button}
+      <Key
+        label="Continuar"
         onPress={handleSubmit(handleContinue)}
-      >
-        <Text style={styles.buttonText}>Continuar</Text>
-      </Pressable>
-    </ScrollView>
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-  },
   title: {
-    fontSize: fontSizes.xl,
+    fontSize: typography.title,
     fontWeight: "700",
-    color: colors.text,
+    color: colors.title,
   },
-  field: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  input: {
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
+  plateText: {
+    fontSize: typography.body,
+    color: colors.textPrimary,
   },
   multilineInput: {
-    minHeight: 96,
+    minHeight: dimensions.multilineField,
   },
-  message: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  information: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
+  warningPlate: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderWidth: borders.warning,
+    borderColor: colors.error,
+    borderRadius: radius.medium,
+    backgroundColor: colors.surfaceSecondary,
   },
   warning: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.warning,
-  },
-  error: {
-    fontSize: fontSizes.sm,
-    color: colors.danger,
-  },
-  feedback: {
-    gap: spacing.sm,
+    fontSize: typography.body,
+    fontWeight: "700",
+    color: colors.error,
   },
   switchRow: {
     flexDirection: "row",
@@ -300,15 +289,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.md,
   },
-  button: {
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-  },
-  buttonText: {
-    fontSize: fontSizes.md,
+  switchLabel: {
+    fontSize: typography.label,
     fontWeight: "600",
-    textAlign: "center",
-    color: colors.primaryContrast,
+    color: colors.textPrimary,
+  },
+  errorPlate: {
+    borderLeftWidth: borders.errorStripe,
+    borderLeftColor: colors.error,
+    backgroundColor: colors.surfaceSecondary,
   },
 });

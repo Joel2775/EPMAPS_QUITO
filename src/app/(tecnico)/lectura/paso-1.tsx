@@ -1,9 +1,12 @@
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
+import { Plate } from "@/components/ui/Plate";
+import { Screen } from "@/components/ui/Screen";
+import { StepHeader } from "@/components/ui/StepHeader";
+import { borders, colors, spacing, typography } from "@/theme/tokens";
 import { useDraftStore } from "@/store/draft";
-import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
 import type { ReadingCondition } from "@/types";
 
 const conditions: { value: ReadingCondition; label: string }[] = [
@@ -11,6 +14,12 @@ const conditions: { value: ReadingCondition; label: string }[] = [
   { value: "inaccesible", label: "Inaccesible" },
   { value: "dañado", label: "Dañado" },
 ];
+
+const stripeColors: Record<ReadingCondition, string> = {
+  normal: colors.secondaryBlue,
+  inaccesible: colors.gold,
+  dañado: colors.primary,
+};
 
 export default function ReadingConditionScreen() {
   const condition = useDraftStore((state) => state.condition);
@@ -27,52 +36,70 @@ export default function ReadingConditionScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
+      <StepHeader currentStep={1} />
       <Text style={styles.title}>Selecciona el estado del medidor</Text>
       {conditions.map((conditionOption) => {
         const selected = conditionOption.value === condition;
 
         return (
-          <Pressable
-            accessibilityRole="button"
+          <Plate
             key={conditionOption.value}
-            style={[styles.button, selected && styles.selectedButton]}
             onPress={() => chooseCondition(conditionOption.value)}
+            style={[styles.condition, selected && styles.selected]}
           >
-            <Text style={styles.buttonText}>{conditionOption.label}</Text>
-          </Pressable>
+            <View
+              style={[
+                styles.stripe,
+                { backgroundColor: stripeColors[conditionOption.value] },
+              ]}
+            />
+            <View style={styles.conditionText}>
+              <Text style={styles.label}>{conditionOption.label}</Text>
+              {selected ? (
+                <Text style={styles.selectedLabel}>Seleccionado</Text>
+              ) : null}
+            </View>
+          </Plate>
         );
       })}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-  },
   title: {
-    fontSize: fontSizes.xl,
+    fontSize: typography.title,
+    fontWeight: "800",
+    color: colors.title,
+  },
+  condition: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.md,
+  },
+  selected: {
+    borderWidth: borders.selected,
+    borderColor: colors.electricBlue,
+  },
+  stripe: {
+    width: borders.conditionStripe,
+    borderRadius: spacing.xs,
+  },
+  conditionText: {
+    flex: 1,
+    justifyContent: "center",
+    gap: spacing.xs,
+    minHeight: spacing.xl,
+  },
+  label: {
+    fontSize: typography.subtitle,
     fontWeight: "700",
-    color: colors.text,
+    color: colors.textPrimary,
   },
-  button: {
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-  },
-  selectedButton: {
-    borderWidth: 2,
-    borderColor: colors.success,
-  },
-  buttonText: {
-    fontSize: fontSizes.md,
+  selectedLabel: {
+    fontSize: typography.label,
     fontWeight: "600",
-    textAlign: "center",
-    color: colors.primaryContrast,
+    color: colors.electricBlue,
   },
 });

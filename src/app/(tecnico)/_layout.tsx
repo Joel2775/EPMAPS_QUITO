@@ -9,10 +9,14 @@ export default function TechnicianLayout() {
       <ResumeDraftPrompt />
       <Stack
         screenOptions={{
-          contentStyle: { backgroundColor: colors.background },
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: { color: colors.textPrimary },
+          headerShadowVisible: false,
         }}
       >
-        <Stack.Screen name="index" options={{ title: "Inicio" }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="lectura" options={{ headerShown: false }} />
       </Stack>
     </>
   );

@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
+import { Field } from "@/components/ui/Field";
+import { Key } from "@/components/ui/Key";
+import { Plate } from "@/components/ui/Plate";
+import { Screen } from "@/components/ui/Screen";
 import { useSessionStore } from "@/store/session";
-import { colors, fontSizes, radii, spacing } from "@/theme/tokens";
+import { borders, colors, radius, spacing, typography } from "@/theme/tokens";
 
 export default function LoginScreen() {
   const login = useSessionStore((state) => state.login);
@@ -20,80 +24,89 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Medidores EPMAPS</Text>
-      <Text style={styles.subtitle}>Identifícate para continuar</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Código de técnico"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        value={code}
-        onChangeText={setCode}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Clave"
-        placeholderTextColor={colors.textMuted}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <Pressable
-        accessibilityRole="button"
-        style={styles.button}
-        onPress={handleLogin}
-      >
-        <Text style={styles.buttonText}>Ingresar</Text>
-      </Pressable>
-    </View>
+    <Screen contentContainerStyle={styles.container}>
+      <View style={styles.hero}>
+        <View style={styles.brandMark}>
+          <Text style={styles.brandLetter}>E</Text>
+        </View>
+        <Text style={styles.eyebrow}>EPMAPS · OPERACIÓN EN CAMPO</Text>
+        <Text style={styles.title}>Lecturas EPMAPS</Text>
+        <Text style={styles.subtitle}>Identifícate para continuar</Text>
+      </View>
+      <Plate>
+        <Field
+          label="Código de técnico"
+          placeholder="Código de técnico"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          value={code}
+          onChangeText={setCode}
+        />
+        <Field
+          label="Clave"
+          placeholder="Clave"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        {error ? (
+          <View style={styles.errorPlate}>
+            <Text style={styles.error}>{error}</Text>
+          </View>
+        ) : null}
+        <Key label="Ingresar" onPress={handleLogin} />
+      </Plate>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     justifyContent: "center",
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
+    paddingVertical: spacing.xxl,
+  },
+  hero: {
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  brandMark: {
+    width: spacing.huge,
+    height: spacing.huge,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    borderRadius: radius.medium,
+    backgroundColor: colors.electricBlue,
+  },
+  brandLetter: {
+    fontSize: typography.subtitle,
+    fontWeight: "800",
+    color: colors.surface,
+  },
+  eyebrow: {
+    fontSize: typography.small,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: colors.secondaryBlue,
   },
   title: {
-    fontSize: fontSizes.xl,
-    fontWeight: "700",
-    color: colors.text,
+    fontSize: typography.title,
+    fontWeight: "800",
+    color: colors.deepBlue,
   },
   subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.textMuted,
+    fontSize: typography.body,
+    color: colors.textSecondary,
   },
-  input: {
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
+  errorPlate: {
+    borderLeftWidth: borders.errorStripe,
+    borderLeftColor: colors.error,
+    borderRadius: radius.small,
+    backgroundColor: colors.surfaceSecondary,
   },
   error: {
-    fontSize: fontSizes.sm,
-    color: colors.danger,
-  },
-  button: {
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-  },
-  buttonText: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    textAlign: "center",
-    color: colors.primaryContrast,
+    fontSize: typography.body,
+    color: colors.error,
   },
 });

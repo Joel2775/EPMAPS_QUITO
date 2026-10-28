@@ -1,13 +1,14 @@
 ## Estado actual
-- Skills 06b y 07 implementadas: corrección solo mientras está pendiente y borradores reanudables; la foto original se conserva durante una corrección.
-- Skill 08 implementada: SQLite reclama, verifica y marca lecturas; `src/services/sync.ts` comprueba `clientId` antes del POST y evita duplicados.
-- `src/components/SyncManager.tsx` reintenta al abrir, reconectar, volver a primer plano y cada 30 segundos con pendientes; `ConnectionBanner.tsx` muestra conexión, pendientes y envío.
-- `src/store/sync.ts` mantiene el estado de sincronización en memoria; lista local se actualiza al cambiar `version`.
-- `docs/CONTRATO.md` actualizado con el servicio, store, componentes y consultas de envío.
-- `npx tsc --noEmit` pasó tras la implementación y el ajuste final del gestor.
-- MockAPI devuelve HTTP 404 al filtrar `/readings?clientId=...` sin coincidencias, aunque `/readings` existe y responde 200. `findReadingByClientId` ahora recurre a la lista y compara el `clientId` exacto; reconoce registros antiguos sin exigir `status: "sent"`.
-- La primera prueba dejó 3 lecturas locales pendientes de forma segura; volverán a sincronizarse automáticamente con el ajuste.
+- Buscar y Lecturas están agrupadas en `src/app/(tecnico)/(tabs)/`; el flujo de registro queda en rutas internas del grupo técnico.
+- Se renovó la interfaz con superficies claras, jerarquía tipográfica, tarjetas suaves, botones táctiles y pestañas redondeadas; tokens concentrados en `src/theme/tokens.ts`.
+- La barra de pestañas reserva el inset inferior del sistema y las pantallas conservan scroll, áreas seguras y adaptación al teclado.
+- Las pestañas tienen iconos propios dibujados con StyleSheet, estados activo/inactivo y se ocultan al abrir el teclado.
+- En el historial, la vista de cada lectura muestra medición para estados normal/dañado, descripción para inaccesible/dañado y foto solo para daño o consumo anómalo normal.
+- `npx tsc --noEmit` pasó tras el rediseño. `git diff --check` no detectó errores de formato; no se modificaron dependencias ni lógica de negocio.
+- `npx expo lint` había detectado dos errores de estado desde efectos y advertencias en los pasos; no están relacionados con el rediseño visual.
+- Se eliminó el `eslint.config.js` generado automáticamente por Expo al ejecutar lint; no se cambiaron dependencias.
+- No se ha comprobado visualmente el emulador.
 
 ## Próximos pasos
-- Reprobar que las 3 lecturas se envíen y confirmar que hay exactamente un registro remoto por `clientId`.
-- Completar en dispositivo la checklist: online/offline, verificación pendiente, cierre y reapertura, cambios de red sin duplicados, banner en todas las pantallas y bloqueo de corrección una vez enviada.
+- Probar en teléfono/emulador el aspecto de las tarjetas, el encabezado, las pestañas y el espaciado en diferentes tamaños.
+- Comprobar en el historial las variantes normal, inaccesible y dañado, además de navegación Android, áreas seguras, teclado, scroll y sincronización.

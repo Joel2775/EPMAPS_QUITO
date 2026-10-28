@@ -7,10 +7,12 @@ App móvil de lecturas de medidores de agua (EPMAPS Quito). Expo SDK 57 + TypeSc
 ## 1. Reglas globales
 1. Solo las dependencias de la sección 2. Instalar con `npx expo install` (las que no son de Expo, con `npm install`).
 2. Cada skill toca solo los archivos que declara.
-3. UI mínima con StyleSheet hasta la skill 09. Todo color y espaciado sale de `src/theme/tokens.ts`.
+3. La UI se implementa con `StyleSheet`. Todo color, tamaño y espaciado sale de `src/theme/tokens.ts`; la skill 09 aplica el sistema visual claymorphism.
 4. Identificadores en inglés; textos visibles y comentarios en español.
 5. Al terminar: `npx tsc --noEmit` sin errores, "Explicación para la defensa" (máx. 10 líneas) y mensaje de commit sugerido. La IA no hace commit.
 6. Nada de Base64 ni de fotos en carpeta temporal.
+7. La paleta de interfaz y sus tonos neutros/funcionales se limitan a los colores definidos en `src/theme/tokens.ts`; no se escriben valores de color directamente en pantallas o componentes.
+8. Las pantallas desplazables ajustan el contenido y las acciones al teclado; Android usa `softwareKeyboardLayoutMode: "resize"` y se respetan las áreas seguras del sistema.
 
 ## 2. Dependencias permitidas
 | Paquete | Req. | ADR |
@@ -28,9 +30,9 @@ Prohibido: Redux, Formik, WatermelonDB, expo-camera, NetInfo, Axios, librerías 
 Por verificar en la documentación del SDK 57: persistir Zustand con `expo-sqlite/kv-store` (si no sirve, AsyncStorage con un ADR) y los nombres de la API nueva de `expo-file-system` (File, Directory, Paths).
 
 ## 3. Estructura
-- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL; `readings.ts` contiene las consultas parametrizadas para registrar, buscar y listar lecturas. `src/services`: único acceso a MockAPI (api.ts), envío (sync.ts) y descarte de borradores (drafts.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio, incluyendo `date.ts` (`currentMonthYear` con hora local). `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query y `useNetworkStatus.ts` expone el estado de conexión y su consulta puntual. `src/components/ResumeDraftPrompt.tsx` ofrece reanudar o descartar un borrador hidratado; `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
+- `src/app`: solo pantallas y layouts. `src/db`: único lugar con SQL; `readings.ts` contiene las consultas parametrizadas para registrar, buscar y listar lecturas. `src/services`: único acceso a MockAPI (api.ts), envío (sync.ts) y descarte de borradores (drafts.ts); `queryClient.ts` configura TanStack Query en memoria. `src/store`: único lugar con Zustand. `src/schemas`: Zod. `src/domain`: funciones puras de reglas de negocio, incluyendo `date.ts` (`currentMonthYear` con hora local). `src/hooks`: `useMeter.ts` consulta medidores con TanStack Query y `useNetworkStatus.ts` expone el estado de conexión y su consulta puntual. `src/components/ui/`: componentes reutilizables de presentación. `src/components/ResumeDraftPrompt.tsx` ofrece reanudar o descartar un borrador hidratado; `src/theme/tokens.ts`, `src/types`, `src/constants` (config.ts, tecnicos.ts).
 - R2: `src/schemas/meter.ts` exporta `meterCodeSchema`, que valida el formato `/^MED-\d{6}$/` sin transformar el código.
-- Rutas: `/login`, `/` (lista), `/buscar`, `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación).
+- Rutas: `/login`, grupo `src/app/(tecnico)/(tabs)/` con `/` (búsqueda de medidor, pestaña Buscar) y `/explore` (lista de lecturas, pestaña Lecturas), y `/lectura/paso-1` (estado), `/lectura/paso-2` (lectura o motivo), `/lectura/paso-3` (foto y confirmación) como rutas internas fuera de las pestañas.
 - `src/components/ConnectionBanner.tsx` muestra conexión, pendientes y estado de envío en todas las pantallas (R9); `src/components/SyncManager.tsx` coordina los reintentos.
 - `src/store/sync.ts` mantiene en memoria `pendingCount`, `isSyncing` y `version`. `src/services/sync.ts` sincroniza lecturas sin duplicarlas y verifica las registradas sin conexión.
 

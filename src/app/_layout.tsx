@@ -8,7 +8,7 @@ import SyncManager from "@/components/SyncManager";
 import { initDatabase } from "@/db/init";
 import { queryClient } from "@/services/queryClient";
 import { useSessionStore } from "@/store/session";
-import { colors, fontSizes, spacing } from "@/theme/tokens";
+import { colors, spacing, typography } from "@/theme/tokens";
 
 function RootNavigator() {
   const employeeCode = useSessionStore((state) => state.employeeCode);
@@ -26,6 +26,10 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         contentStyle: { backgroundColor: colors.background },
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { color: colors.textPrimary },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Protected guard={!employeeCode}>
@@ -64,7 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   loadingText: {
-    fontSize: fontSizes.md,
-    color: colors.textMuted,
+    fontSize: typography.body,
+    color: colors.title,
   },
 });

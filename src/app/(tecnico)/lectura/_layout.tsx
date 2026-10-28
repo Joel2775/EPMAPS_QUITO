@@ -1,9 +1,9 @@
 import { useRouter, Stack } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { Alert, Pressable, Text } from "react-native";
+import { Alert, Pressable, StyleSheet, Text } from "react-native";
 
 import { discardDraft } from "@/services/drafts";
-import { colors, fontSizes, spacing } from "@/theme/tokens";
+import { colors, dimensions, spacing, typography } from "@/theme/tokens";
 
 export default function ReadingLayout() {
   const db = useSQLiteContext();
@@ -13,10 +13,9 @@ export default function ReadingLayout() {
       accessibilityRole="button"
       onPress={confirmDiscard}
       hitSlop={spacing.sm}
+      style={styles.headerAction}
     >
-      <Text style={{ color: colors.danger, fontSize: fontSizes.sm }}>
-        Descartar
-      </Text>
+      <Text style={styles.headerActionText}>Descartar</Text>
     </Pressable>
   );
 
@@ -46,7 +45,15 @@ export default function ReadingLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerRight }}>
+    <Stack
+      screenOptions={{
+        headerRight,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { color: colors.textPrimary },
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen
         name="paso-1"
         options={{ title: "Estado del medidor" }}
@@ -62,3 +69,16 @@ export default function ReadingLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  headerAction: {
+    minHeight: dimensions.touchTarget,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  headerActionText: {
+    fontSize: typography.small,
+    fontWeight: "600",
+    color: colors.electricBlue,
+  },
+});
